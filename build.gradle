@@ -1,0 +1,119 @@
+import java.nio.channels.FileChannel
+
+plugins {
+    id "com.github.hierynomus.license" version "0.14.0"
+    id 'org.spongepowered.plugin' version '0.8.1'
+    id 'com.github.johnrengelman.shadow' version '2.0.2'
+    id "com.jfrog.artifactory" version "4.4.15"
+}
+
+apply plugin: 'java'
+apply plugin: 'idea'
+apply plugin: 'eclipse'
+apply plugin: 'maven-publish'
+sourceCompatibility = 1.8
+
+group 'net.reallifegames'
+project.ext.baseName = 'glm'
+version '1.0.0'
+description = 'Minecraft WebGL Map.'
+archivesBaseName = 'GlmSponge'
+
+project.ext.rlgMavenUser = hasProperty('rlgMavenUser') ? rlgMavenUser : System.getenv('rlgMavenUser')
+project.ext.rlgMavenPassword = hasProperty('rlgMavenPassword') ? rlgMavenPassword : System.getenv('rlgMavenPassword')
+
+repositories {
+    mavenCentral()
+    maven {
+        url 'https://repo.spongepowered.org/maven/'
+    }
+    maven {
+        name = 'reallifegames'
+        url = 'https://reallifegames.net/artifactory/gradle-release-local'
+    }
+}
+
+configurations {
+    compile.extendsFrom shadow
+}
+
+dependencies {
+    compile 'org.spongepowered:spongeapi:7.0.0'
+    compile 'net.reallifegames:GlmCommon:1.0.1'
+    compile 'com.fasterxml.jackson.core:jackson-databind:2.9.4'
+    compile 'org.java-websocket:Java-WebSocket:1.3.7'
+
+    shadow 'com.fasterxml.jackson.core:jackson-databind:2.9.4'
+    shadow 'org.java-websocket:Java-WebSocket:1.3.7'
+    shadow 'net.reallifegames:GlmCommon:1.0.1'
+}
+
+license {
+    header project.file("LICENSE.txt")
+    strictCheck true
+    mapping {
+        java='SLASHSTAR_STYLE'
+    }
+}
+
+jar {
+    baseName = archivesBaseName
+    version =  version
+    from {
+        configurations.compile.collect { it.isDirectory() ? it : zipTree(it) }
+    }
+}
+
+shadowJar {
+    baseName = project.ext.baseName
+    classifier = null
+    version = version
+
+    configurations = [project.configurations.shadow]
+    relocate 'com.fasterxml.jackson', 'net.reallifegames.mc.fasterxml'
+}
+
+shadowJar.dependsOn.add("build")
+
+task sourcesJar(type: Jar, dependsOn: classes) {
+    classifier = 'sources'
+    from sourceSets.main.allSource
+}
+
+task javadocJar(type: Jar, dependsOn: javadoc) {
+    classifier = 'javadoc'
+    from javadoc.destinationDir
+}
+
+artifactory {
+    contextUrl = 'https://reallifegames.net/artifactory/'
+    publish {
+        repository {
+            repoKey = 'gradle-release-local'
+            username = "${rlgMavenUser}"
+            password = "${rlgMavenPassword}"
+            maven = true
+        }
+        defaults {
+            publications ('mavenJava')
+        }
+    }
+}
+
+publishing {
+    publications {
+        mavenJava(MavenPublication) {
+            groupId "${group}"
+            artifactId "${archivesBaseName}"
+            version "${version}"
+            from components.java
+
+            artifact (sourcesJar) {
+                classifier "sources"
+            }
+            artifact (javadocJar) {
+                classifier "javadoc"
+            }
+        }
+    }
+}
