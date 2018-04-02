@@ -61,7 +61,7 @@ public class DebugCommand extends CoreCommand {
         try (final Connection connection = pluginInstance.getDataSource().getConnection()) {
             // General information
             final Text.Builder builder = Text.builder().append(Text.of(TextColors.GOLD, "=============== GLM DEBUG INFO ===============")).append(Text.NEW_LINE)
-                    .append(Text.of(TextColors.GREEN, "GLM Version: " + pluginInstance.getPluginContainer().getVersion())).append(Text.NEW_LINE)
+                    .append(Text.of(TextColors.GREEN, "GLM Version: " + pluginInstance.getPluginContainer().getVersion().orElse("Unknown"))).append(Text.NEW_LINE)
                     .append(Text.of(TextColors.GOLD, TextStyles.UNDERLINE, "Available Worlds:")).append(Text.NEW_LINE);
             // Available worlds
             this.pluginInstance.getConfig().getWorldList().forEach(worldName->

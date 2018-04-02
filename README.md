@@ -25,6 +25,11 @@ GlmSponge-x.x.x-javadoc.jar
 GlmSponge-x.x.x-sources.jar
 ```
 
+However, if you wish to build the full GlmSponge plugin please use the `shadowJar` command.
+```
+gradle shadowJar
+```
+
 **Alternatively** you can include Glm-Sponge in your build.gradle file by using the following.
 ```
 repositories {
