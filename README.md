@@ -6,7 +6,7 @@ with [SpongeVanilla](https://github.com/SpongePowered/SpongeVanilla) and [Sponge
 ## Usage
 **Web socket server commands**, you can add you own command with the server by registering it with the CommandRegistrar 
 during the GlmRegisterCommand event.
-```
+```java
 @Listener
 public void onGlmRegisterCommand(@Nonnull final GlmRegisterCommand event) {
     event.getGlmServer().getRegistrar().registerCommand("commandName", new Command());
@@ -31,7 +31,7 @@ gradle shadowJar
 ```
 
 **Alternatively** you can include Glm-Sponge in your build.gradle file by using the following.
-```
+```groovy
 repositories {
     maven {
         name = 'reallifegames'

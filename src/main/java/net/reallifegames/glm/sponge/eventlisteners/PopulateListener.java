@@ -29,6 +29,7 @@ import org.spongepowered.api.event.Listener;
 import org.spongepowered.api.event.world.chunk.PopulateChunkEvent;
 
 import javax.annotation.Nonnull;
+import java.util.List;
 
 /**
  * Update the cache when a chunk is populated.
@@ -49,6 +50,8 @@ public class PopulateListener extends CoreListener {
     @Listener
     public void onPopulate(@Nonnull final PopulateChunkEvent.Post event) {
         // update cache
-        WorldModuleSponge.updateCache(event.getTargetChunk().getWorld(), event.getTargetChunk(), pluginInstance, false);
+        if (pluginInstance.getConfig().getWorldList().contains(event.getTargetChunk().getWorld().getName())) {
+            WorldModuleSponge.updateCache(event.getTargetChunk().getWorld(), event.getTargetChunk(), pluginInstance, false);
+        }
     }
 }

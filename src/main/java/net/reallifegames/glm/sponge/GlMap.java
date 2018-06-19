@@ -30,10 +30,7 @@ import net.reallifegames.glm.sponge.events.GlmRegisterCommand;
 import net.reallifegames.glm.sponge.server.BaseGlmServer;
 import net.reallifegames.glm.sponge.commands.CommandRegistrar;
 import net.reallifegames.glm.sponge.eventlisteners.EventRegistrar;
-import net.reallifegames.glm.sponge.server.command.GetChunksForPositions;
-import net.reallifegames.glm.sponge.server.command.GetPlayers;
-import net.reallifegames.glm.sponge.server.command.GetWorlds;
-import net.reallifegames.glm.sponge.server.command.Init;
+import net.reallifegames.glm.sponge.server.command.*;
 import ninja.leaping.configurate.commented.CommentedConfigurationNode;
 import ninja.leaping.configurate.loader.ConfigurationLoader;
 import org.java_websocket.server.DefaultSSLWebSocketServerFactory;
@@ -47,13 +44,12 @@ import org.spongepowered.api.event.Listener;
 import org.spongepowered.api.event.cause.Cause;
 import org.spongepowered.api.event.cause.EventContext;
 import org.spongepowered.api.event.cause.EventContextKeys;
-import org.spongepowered.api.event.game.state.GameInitializationEvent;
-import org.spongepowered.api.event.game.state.GamePostInitializationEvent;
-import org.spongepowered.api.event.game.state.GamePreInitializationEvent;
-import org.spongepowered.api.event.game.state.GameStoppingEvent;
+import org.spongepowered.api.event.game.state.*;
 import org.spongepowered.api.plugin.Plugin;
 import org.spongepowered.api.plugin.PluginContainer;
 import org.spongepowered.api.service.sql.SqlService;
+import org.spongepowered.api.world.World;
+import org.spongepowered.api.world.WorldBorder;
 
 import javax.annotation.Nonnull;
 import javax.inject.Inject;
@@ -61,10 +57,10 @@ import javax.sql.DataSource;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.file.Path;
+import java.security.NoSuchAlgorithmException;
 import java.sql.Connection;
 import java.sql.SQLException;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.*;
 
 /**
  * Main plugin class that sponge will load. You should only attempt to inject dependencies into this class.
@@ -77,32 +73,30 @@ import java.util.List;
 public final class GlMap {
 
     /**
-     * Loads the config from the file. call {@link ConfigurationLoader#load()} to refresh the
-     * current config.
+     * Loads the config from the file. call {@link ConfigurationLoader#load()} to refresh the current config.
      */
     @Inject
     @DefaultConfig (sharedRoot = false)
     private ConfigurationLoader<CommentedConfigurationNode> configLoader;
 
     /**
-     * Provides the full config path (weather it be there or not).
-     * Example: C:/Server/config/[plugin]/config.conf or C:/Server/config/config.conf
+     * Provides the full config path (weather it be there or not). Example: C:/Server/config/[plugin]/config.conf or
+     * C:/Server/config/config.conf
      */
     @Inject
     @DefaultConfig (sharedRoot = false)
     private Path defaultConfig;
 
     /**
-     * Provides the full config dir path.
-     * Example: C:/Server/config/[plugin]/ or C:/Server/config/
+     * Provides the full config dir path. Example: C:/Server/config/[plugin]/ or C:/Server/config/
      */
     @Inject
     @ConfigDir (sharedRoot = false)
     private Path privateConfigDir;
 
     /**
-     * A wrapper around a class marked with an Plugin annotation to retrieve information
-     * from the annotation for easier use. Can be used to get assets or the plugin instance.
+     * A wrapper around a class marked with an Plugin annotation to retrieve information from the annotation for easier
+     * use. Can be used to get assets or the plugin instance.
      */
     @Inject
     private PluginContainer pluginContainer;
@@ -137,12 +131,22 @@ public final class GlMap {
     /**
      * The chunk load cause for this plugin.
      */
-    private Cause chunkloadCause;
+    private Cause chunkLoadCause;
 
     /**
-     * The {@link GamePreInitializationEvent} is triggered. During this state, the plugin gets ready for
-     * initialization. Access to a default logger instance and access to information regarding
-     * preferred configuration file locations is available.
+     * The world border map for the list of worlds.
+     */
+    private final Map<UUID, Optional<WorldBorder>> worldBorderMap = new HashMap<>();
+
+    /**
+     * The map of client uuid's.
+     */
+    private final Map<String, String> clientMapIdMap = new HashMap<>();
+
+    /**
+     * The {@link GamePreInitializationEvent} is triggered. During this state, the plugin gets ready for initialization.
+     * Access to a default logger instance and access to information regarding preferred configuration file locations is
+     * available.
      *
      * @param event represents {@link GameState#PRE_INITIALIZATION} event.
      */
@@ -157,8 +161,8 @@ public final class GlMap {
     }
 
     /**
-     * The {@link GameInitializationEvent} is triggered. During this state, the plugin should finish any work
-     * needed in order to be functional. Global event handlers should get registered in this stage.
+     * The {@link GameInitializationEvent} is triggered. During this state, the plugin should finish any work needed in
+     * order to be functional. Global event handlers should get registered in this stage.
      *
      * @param event represents {@link GameState#INITIALIZATION} event.
      */
@@ -173,26 +177,43 @@ public final class GlMap {
     }
 
     /**
-     * The {@link GamePostInitializationEvent} is triggered. During this state, the plugin should finish any work
-     * needed in order to be functional.
+     * The {@link GamePostInitializationEvent} is triggered. During this state, the plugin should initialize any work needed
+     * in order to be functional.
      *
      * @param event represents {@link GameState#POST_INITIALIZATION} event.
      */
     @Listener
     public void onPostGameInitialization(@Nonnull final GamePostInitializationEvent event) {
-        chunkloadCause = Cause.builder().append(this.getPluginContainer()).build(EventContext.builder().build());
+        chunkLoadCause = Cause.builder().append(this.getPluginContainer()).build(EventContext.builder().build());
         // If config is not loaded return so no NPE
         if (!config.isLoaded()) {
             return;
         }
         // Create table if not present
         try (final Connection connection = getDataSource().getConnection()) {
-            SqlModule.createTable(connection);
+            SqlModule.createChunksTable(connection);
+            SqlModule.createBansTable(connection);
         } catch (SQLException e) {
             logger.error("Error creating table in sql server: ", e);
         }
         // Create and sort all of the block types
         stateList = new ArrayList<>(Sponge.getGame().getRegistry().getAllOf(BlockState.class));
+    }
+
+    /**
+     * The {@link GameStartedServerEvent} is triggered. During this state, the plugin should finish any work needed
+     * in order to be functional.
+     *
+     * @param event represents {@link GameState#POST_INITIALIZATION} event.
+     */
+    @Listener
+    public void onServerStartedEvent(@Nonnull final GameStartedServerEvent event) {
+        // Get initial list of world borders.
+        for (World world : Sponge.getServer().getWorlds()) {
+            if (this.config.getWorldList().contains(world.getName())) {
+                this.worldBorderMap.put(world.getUniqueId(), Optional.of(world.getWorldBorder()));
+            }
+        }
         // Init chunk load queue
         RequestQueue.init(this);
         // Start the GL server
@@ -200,24 +221,28 @@ public final class GlMap {
         if (config.useSsl()) {
             try {
                 baseGlmServer.setWebSocketFactory(new DefaultSSLWebSocketServerFactory(SslModule.getSSLContextFromKeystore()));
-            } catch (IllegalStateException e) {
+            } catch (NoSuchAlgorithmException e) {
                 logger.warn("Unable to make the WebSocket server ssl secure", e);
             }
         }
-        if (Sponge.getEventManager().post(new GlmRegisterCommand(Cause.of(EventContext.builder().add(
+        if (!Sponge.getEventManager().post(new GlmRegisterCommand(Cause.of(EventContext.builder().add(
                 EventContextKeys.PLUGIN, this.getPluginContainer()).build(), this), baseGlmServer))) {
             // Register available commands
             baseGlmServer.getRegistrar().registerCommand("init", new Init(this));
+            baseGlmServer.getRegistrar().registerCommand("getServers", new GetServers(this));
             baseGlmServer.getRegistrar().registerCommand("getWorlds", new GetWorlds(this));
             baseGlmServer.getRegistrar().registerCommand("getPlayers", new GetPlayers(this));
             baseGlmServer.getRegistrar().registerCommand("getChunksForPositions", new GetChunksForPositions(this));
+            baseGlmServer.getRegistrar().registerCommand("setClientUuid", new SetClientUuid(this));
         }
         baseGlmServer.start();
+        baseGlmServer.setTcpNoDelay(true);
+        baseGlmServer.setReuseAddr(true);
     }
 
     /**
-     * The {@link GameStoppingEvent} is triggered. During this state, the plugin should finish any work
-     * needed in order to shutdown.
+     * The {@link GameStoppingEvent} is triggered. During this state, the plugin should finish any work needed in order
+     * to shutdown.
      *
      * @param event represents {@link GameState#GAME_STOPPING} event.
      */
@@ -228,11 +253,13 @@ public final class GlMap {
             return;
         }
         // Stop the server
-        try {
-            baseGlmServer.stop();
-            baseGlmServer = null;
-        } catch (IOException | InterruptedException e) {
-            logger.error("Error stopping the gl web socket server: ", e);
+        if (baseGlmServer != null) {
+            try {
+                baseGlmServer.stop();//todo investigate socket TIME_WAIT
+                baseGlmServer = null;
+            } catch (IOException | InterruptedException e) {
+                logger.error("Error stopping the gl web socket server: ", e);
+            }
         }
         // stop request queue
         RequestQueue.stop();
@@ -319,6 +346,20 @@ public final class GlMap {
      * @return a cause for chunk loading which this plugin performs.
      */
     public Cause getChunkLoadCause() {
-        return chunkloadCause;
+        return chunkLoadCause;
+    }
+
+    /**
+     * @return the world border map for the list of worlds.
+     */
+    public Map<UUID, Optional<WorldBorder>> getWorldBorderMap() {
+        return worldBorderMap;
+    }
+
+    /**
+     * @return the map of client uuid's.
+     */
+    public Map<String, String> getClientMapIdMap() {
+        return clientMapIdMap;
     }
 }

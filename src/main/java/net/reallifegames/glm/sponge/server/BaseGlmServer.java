@@ -56,11 +56,11 @@ public class BaseGlmServer extends GlmServer {
 
     @Override
     public void onError(@Nonnull final WebSocket conn, @Nonnull final Exception ex) {
-        pluginInstance.getLogger().debug("WebSocket client error", conn, ex);
+        pluginInstance.getLogger().error("WebSocket error", conn, ex);
     }
 
     @Override
     public void onStart() {
-
+        pluginInstance.getLogger().info("Starting WebSocket server on " + this.getAddress().getHostString() + ":" + this.getAddress().getPort());
     }
 }

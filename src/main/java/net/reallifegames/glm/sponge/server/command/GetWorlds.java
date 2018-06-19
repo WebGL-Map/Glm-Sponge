@@ -26,17 +26,20 @@ package net.reallifegames.glm.sponge.server.command;
 import com.fasterxml.jackson.core.JsonFactory;
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.databind.JsonNode;
+import com.flowpowered.math.vector.Vector3d;
 import net.reallifegames.glm.sponge.GlMap;
 import net.reallifegames.glm.sponge.server.GlmServerCommand;
 import org.java_websocket.WebSocket;
 import org.spongepowered.api.Sponge;
 import org.spongepowered.api.world.World;
+import org.spongepowered.api.world.WorldBorder;
 
 import javax.annotation.Nonnull;
 import java.io.IOException;
 import java.io.StringWriter;
 import java.util.Collection;
 import java.util.List;
+import java.util.Optional;
 
 /**
  * Returns all available worlds on this server.
@@ -55,6 +58,7 @@ public final class GetWorlds extends GlmServerCommand {
     }
 
     @Override
+    @SuppressWarnings ("Duplicates")
     public void handle(@Nonnull final WebSocket connection, @Nonnull final JsonNode commandNode) {
         try {
             StringWriter stringWriter = new StringWriter();
@@ -64,12 +68,17 @@ public final class GetWorlds extends GlmServerCommand {
             // echo command back
             jsonGenerator.writeStringField("cmd", "getWorlds");
             // Start data block
-            jsonGenerator.writeArrayFieldStart("data");
+            jsonGenerator.writeObjectFieldStart("data");
+            // echo command interval
+            jsonGenerator.writeNumberField("commandInterval", getInterval());
+            // Start worlds block
+            jsonGenerator.writeArrayFieldStart("worlds");
             // get list of worlds
             final Collection<World> worlds = Sponge.getGame().getServer().getWorlds();
             final List<String> availableWorlds = pluginInstance.getConfig().getWorldList();
             for (World world : worlds) {
                 if (availableWorlds.contains(world.getName())) {
+                    final Optional<WorldBorder> optionalWorldBorder = pluginInstance.getWorldBorderMap().getOrDefault(world.getUniqueId(), Optional.empty());
                     // start general world object
                     jsonGenerator.writeStartObject();
                     jsonGenerator.writeStringField("name", world.getName());
@@ -83,12 +92,29 @@ public final class GetWorlds extends GlmServerCommand {
                     jsonGenerator.writeNumberField("z", world.getSpawnLocation().getZ());
                     // close spawn point object
                     jsonGenerator.writeEndObject();
+                    // Start world border if present
+                    if (optionalWorldBorder.isPresent()) {
+                        final WorldBorder border = optionalWorldBorder.get();
+                        final Vector3d center = border.getCenter();
+                        jsonGenerator.writeObjectFieldStart("worldBorder");
+                        jsonGenerator.writeObjectFieldStart("center");
+                        jsonGenerator.writeNumberField("x", center.getX());
+                        jsonGenerator.writeNumberField("y", center.getY());
+                        jsonGenerator.writeNumberField("z", center.getZ());
+                        // close center object
+                        jsonGenerator.writeEndObject();
+                        jsonGenerator.writeNumberField("diameter", border.getDiameter());
+                        // close world border object
+                        jsonGenerator.writeEndObject();
+                    }
                     // close general object
                     jsonGenerator.writeEndObject();
                 }
             }
-            // close data object
+            // close world array
             jsonGenerator.writeEndArray();
+            // close data object
+            jsonGenerator.writeEndObject();
             // Close json object
             jsonGenerator.writeEndObject();
             // Flush data and send to client
@@ -102,6 +128,6 @@ public final class GetWorlds extends GlmServerCommand {
 
     @Override
     public long getInterval() {
-        return 0;
+        return pluginInstance.getConfig().getGeneralCommandInterval();
     }
 }

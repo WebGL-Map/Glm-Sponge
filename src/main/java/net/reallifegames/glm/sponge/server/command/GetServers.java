@@ -29,25 +29,29 @@ import com.fasterxml.jackson.databind.JsonNode;
 import net.reallifegames.glm.sponge.GlMap;
 import net.reallifegames.glm.sponge.server.GlmServerCommand;
 import org.java_websocket.WebSocket;
+import org.spongepowered.api.Sponge;
 import org.spongepowered.api.block.BlockState;
+import org.spongepowered.api.world.World;
 
 import javax.annotation.Nonnull;
 import java.io.IOException;
 import java.io.StringWriter;
+import java.util.Collection;
+import java.util.List;
 
 /**
- * Handles the initial data that a client needs to make future requests.
+ * Sends a list of servers to the clients.
  *
  * @author Tyler Bucher
  */
-public final class Init extends GlmServerCommand {
+public class GetServers extends GlmServerCommand {
 
     /**
      * Creates a new Glm server command.
      *
      * @param pluginInstance the plugin instance to get data from.
      */
-    public Init(@Nonnull final GlMap pluginInstance) {
+    public GetServers(@Nonnull final GlMap pluginInstance) {
         super(pluginInstance);
     }
 
@@ -59,19 +63,15 @@ public final class Init extends GlmServerCommand {
             JsonGenerator jsonGenerator = new JsonFactory().createGenerator(stringWriter);
             jsonGenerator.writeStartObject();
             // echo command back
-            jsonGenerator.writeStringField("cmd", "init");
+            jsonGenerator.writeStringField("cmd", "getServers");
             // Start data block
             jsonGenerator.writeObjectFieldStart("data");
             // echo command interval
             jsonGenerator.writeNumberField("commandInterval", getInterval());
-            // echo server name
-            jsonGenerator.writeStringField("serverName", pluginInstance.getConfig().getServerName());
-            // echo chunk lifetime
-            jsonGenerator.writeNumberField("cacheLifetime", pluginInstance.getConfig().getGlChunkCacheLifetime());
             // echo map ids
-            jsonGenerator.writeArrayFieldStart("states");
-            for (BlockState blockState : pluginInstance.getStateList()) {
-                jsonGenerator.writeString(blockState.toString());
+            jsonGenerator.writeArrayFieldStart("servers");
+            for (String serverString : pluginInstance.getConfig().getServerList()) {
+                jsonGenerator.writeString(serverString);
             }
             // close id map object
             jsonGenerator.writeEndArray();

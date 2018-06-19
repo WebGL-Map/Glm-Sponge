@@ -37,6 +37,7 @@ import org.java_websocket.WebSocket;
 import org.spongepowered.api.Sponge;
 import org.spongepowered.api.world.Chunk;
 import org.spongepowered.api.world.World;
+import org.spongepowered.api.world.WorldBorder;
 
 import javax.annotation.Nonnull;
 import java.io.IOException;
@@ -94,6 +95,17 @@ public final class GetChunksForPositions extends GlmServerCommand {
                     final Vector3i chunkLocation = commandNode.get("dataType").asText().equals("chunkPosition") ?
                             new Vector3i(node.get("x").asInt(), node.get("y").asInt(), node.get("z").asInt()) :
                             world.getLocation(node.get("x").asDouble(), node.get("y").asDouble(), node.get("z").asDouble()).getChunkPosition();
+                    // Check respect for world border
+                    if (pluginInstance.getConfig().shouldRespectWorldBorder()) {
+                        final Optional<WorldBorder> optionalWorldBorder = pluginInstance.getWorldBorderMap()
+                                .getOrDefault(world.getUniqueId(), Optional.empty());
+                        if (optionalWorldBorder.isPresent()) {
+                            final WorldBorder border = optionalWorldBorder.get();
+                            if (!RequestQueue.containsPosition(chunkLocation, border.getCenter(), border.getDiameter() + 2.0d)) {
+                                continue;
+                            }
+                        }
+                    }
                     final boolean isCachePresent = WorldModuleSponge.chunkInCache(worldId,
                             chunkLocation.getX(),
                             chunkLocation.getY(),
@@ -222,7 +234,10 @@ public final class GetChunksForPositions extends GlmServerCommand {
 
     @Override
     public long getInterval() {
-        return pluginInstance.getConfig().getGlChunkCacheLifetime();
+        // Normally one would think to use the getGlChunkCacheLifetime function from the config. However because a
+        // client can request multiple different chunks back to back this function would end up punishing them for doing
+        // so. Instead we will return 0 so the client can get as many chunks as they want in any given time period.
+        return 0;
     }
 
     /**

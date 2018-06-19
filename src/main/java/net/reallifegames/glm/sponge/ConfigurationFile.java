@@ -67,14 +67,19 @@ public class ConfigurationFile {
     private CommentedConfigurationNode config;
 
     /**
-     * Default list to return if error.
-     */
-    private final List<String> defaultList = new ArrayList<>();
-
-    /**
      * States if the config was loaded.
      */
     private boolean isLoaded;
+
+    /**
+     * The name of the server to send to the web map.
+     */
+    private String serverName;
+
+    /**
+     * The list of server to network together.
+     */
+    private List<String> serverList;
 
     /**
      * The port to start the gl map server on.
@@ -110,6 +115,11 @@ public class ConfigurationFile {
      * The amount of time in between calls for player information.
      */
     private long playerRequestTime;
+
+    /**
+     * The amount of time in between calls for general commands like 'init'.
+     */
+    private long generalCommandInterval;
 
     /**
      * The percent of a tick to consume processing chunks. Values range from 0.1 to 1.0.
@@ -164,7 +174,17 @@ public class ConfigurationFile {
     /**
      * The prefix for database tables.
      */
-    private String databaseTablePrefix;
+    private String databaseTablePrefix; //todo get two new vars from config and use thoes for the new glm server command
+
+    /**
+     * Should the plugin only allow certified map uuid's to connect.
+     */
+    private boolean certifiedUuids;
+
+    /**
+     * A list of certified uuid's for client maps. There should be at least one value in this list.
+     */
+    private List<String> uuidList;
 
     /**
      * Creates a new {@link ConfigurationFile} object.
@@ -212,6 +232,13 @@ public class ConfigurationFile {
         try {
             config = pluginInstance.getConfigLoader().load();
 
+            serverName = config.getNode("glm", "serverName").getString();
+            try {
+                serverList = config.getNode("glm", "serverList").getList(TypeToken.of(String.class));
+            } catch (ObjectMappingException e) {
+                pluginInstance.getLogger().error("Error parsing serverList config option", e);
+                serverList = new ArrayList<>();
+            }
             port = config.getNode("glm", "port").getInt();
             address = config.getNode("glm", "address").getString();
             useSsl = config.getNode("glm", "useSsl").getBoolean();
@@ -219,6 +246,7 @@ public class ConfigurationFile {
             maxWarns = config.getNode("glm", "maxWarns").getInt();
             chunkCacheLifetime = config.getNode("glm", "chunkCacheLifetime").getLong();
             playerRequestTime = config.getNode("glm", "playerRequestTime").getLong();
+            generalCommandInterval = config.getNode("glm", "generalCommandInterval").getLong();
             totalTickPercentage = config.getNode("glm", "totalTickPercentage").getFloat();
             tickInterval = config.getNode("glm", "tickInterval").getInt();
             defaultWorld = config.getNode("glm", "defaultWorld").getString();
@@ -235,6 +263,13 @@ public class ConfigurationFile {
             maximumChunksInCache = config.getNode("glm", "maximumChunksInCache").getInt();
             jdbcDatabaseUrl = config.getNode("glm", "jdbcDatabaseUrl").getString();
             databaseTablePrefix = config.getNode("glm", "databaseTablePrefix").getString();
+            certifiedUuids = config.getNode("glm", "certifiedUuids").getBoolean();
+            try {
+                uuidList = config.getNode("glm", "uuidList").getList(TypeToken.of(String.class));
+            } catch (ObjectMappingException e) {
+                pluginInstance.getLogger().error("Error parsing worldList config option", e);
+                uuidList = new ArrayList<>();
+            }
         } catch (IOException e) {
             pluginInstance.getLogger().warn("Unable to load config", e);
             isLoaded = false;
@@ -264,6 +299,22 @@ public class ConfigurationFile {
      */
     public boolean isLoaded() {
         return isLoaded;
+    }
+
+    /**
+     * @return the address to start the gl map server on.
+     */
+    @Nonnull
+    public String getServerName() {
+        return serverName;
+    }
+
+    /**
+     * @return the list of available worlds to render.
+     */
+    @Nonnull
+    public List<String> getServerList() {
+        return serverList;
     }
 
     /**
@@ -316,6 +367,13 @@ public class ConfigurationFile {
      */
     public long getPlayerRequestTime() {
         return playerRequestTime;
+    }
+
+    /**
+     * @return the amount of time in between calls for general commands like 'init'.
+     */
+    public long getGeneralCommandInterval() {
+        return generalCommandInterval;
     }
 
     /**
@@ -397,5 +455,21 @@ public class ConfigurationFile {
     @Nonnull
     public String getDatabaseTablePrefix() {
         return databaseTablePrefix;
+    }
+
+    /**
+     * @return true if the plugin should only allow certified map uuid's to connect false otherwise.
+     */
+    @Nonnull
+    public boolean isCertifiedUuids() {
+        return certifiedUuids;
+    }
+
+    /**
+     * @return A certified list of uuid's for client maps. There should be at least one value in this list.
+     */
+    @Nonnull
+    public List<String> getUuidList() {
+        return uuidList;
     }
 }

@@ -288,16 +288,19 @@ public final class RequestQueue {
                         final ChunkProcessEntry entry1 = entry;
                         // Load chunk asynchronously
                         if (pluginInstance.getConfig().shouldRespectWorldBorder()) {
-                            final WorldBorder border = world.getWorldBorder();
-                            if (!RequestQueue.containsPosition(entry.getChunkEntry().getKey(), border.getCenter(), border.getDiameter())) {
-                                // Skip request because not in world border.
-                                entry = processQueue.poll();
-                                continue;
+                            final Optional<WorldBorder> optionalWorldBorder = pluginInstance.getWorldBorderMap().get(world.getUniqueId());
+                            if(optionalWorldBorder.isPresent()) {
+                                final WorldBorder border = optionalWorldBorder.get();
+                                if (!RequestQueue.containsPosition(entry.getChunkEntry().getKey(), border.getCenter(), border.getDiameter())) {
+                                    // Skip request because not in world border.
+                                    entry = processQueue.poll();
+                                    continue;
+                                }
                             }
                         }
-                        world.loadChunkAsync(entry.getChunkEntry().getKey(), !entry.getChunkExists()).thenAccept(chunkOptional->chunkOptional.ifPresent(chunk->{
+                        world.loadChunk(entry.getChunkEntry().getKey(), !entry.getChunkExists()).ifPresent(chunk->{
                             entry1.getChunkEntry().getCallbackList().forEach(chunkRunnable->chunkRunnable.run(chunk));
-                        }));
+                        });
                     }
                     // Get next item
                     entry = processQueue.poll();

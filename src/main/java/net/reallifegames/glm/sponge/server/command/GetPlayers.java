@@ -79,6 +79,8 @@ public final class GetPlayers extends GlmServerCommand {
                 jsonGenerator.writeStringField("cmd", "getPlayers");
                 // Start data block
                 jsonGenerator.writeObjectFieldStart("data");
+                // echo command interval
+                jsonGenerator.writeNumberField("commandInterval", getInterval());
                 // echo world id
                 jsonGenerator.writeStringField("worldId", world.getUniqueId().toString());
                 // start player array

@@ -30,6 +30,7 @@ import org.spongepowered.api.event.world.chunk.LoadChunkEvent;
 import org.spongepowered.api.plugin.PluginContainer;
 
 import javax.annotation.Nonnull;
+import java.util.List;
 import java.util.Optional;
 
 /**
@@ -50,13 +51,20 @@ public class ChunkLoadListener extends CoreListener {
 
     @Listener
     public void onLoad(@Nonnull final LoadChunkEvent event) {
+        boolean updateChunk = false;
         final Optional<PluginContainer> optionalPluginContainer = event.getCause().first(PluginContainer.class);
         if (optionalPluginContainer.isPresent()) {
             if (!optionalPluginContainer.get().getId().equals(pluginInstance.getPluginContainer().getId())) {
-                WorldModuleSponge.updateCache(event.getTargetChunk().getWorld(), event.getTargetChunk(), pluginInstance, true);
+                updateChunk = true;
             }
         } else {
-            WorldModuleSponge.updateCache(event.getTargetChunk().getWorld(), event.getTargetChunk(), pluginInstance, true);
+            updateChunk = true;
+        }
+        // Update chunk if preconditions pass.
+        if (updateChunk) {
+            if (pluginInstance.getConfig().getWorldList().contains(event.getTargetChunk().getWorld().getName())) {
+                WorldModuleSponge.updateCache(event.getTargetChunk().getWorld(), event.getTargetChunk(), pluginInstance, true);
+            }
         }
     }
 }
