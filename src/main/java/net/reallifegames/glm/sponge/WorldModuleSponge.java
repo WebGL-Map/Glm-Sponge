@@ -154,7 +154,7 @@ public final class WorldModuleSponge extends WorldModule {
                 // Get block type at height
                 final int y = chunk.getHighestYAt(15 - (max.getX() - x), 15 - (max.getZ() - z));
                 // Add to block height and data builder
-                chunkBlockTypeBuilder.append(chunk.getBlock(x, y - 1, z).toString()).append('|');
+                chunkBlockTypeBuilder.append(chunk.getBlock(x, y == 0 ? 0 : y - 1, z).toString()).append('|');
                 chunkBlockHeight[chunkHeightIndex++] = y;
             }
         }
