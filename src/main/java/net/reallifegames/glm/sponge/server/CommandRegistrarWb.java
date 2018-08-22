@@ -92,6 +92,6 @@ public class CommandRegistrarWb extends CommandRegistrar {
                 pluginInstance.getLogger().error("Error getting sql database: ", e);
             }
         }
-        connection.send("{\"cmd\": \"commandInterval\", \"data\": {\"command\": \"" + command + "\"}}");
+        connection.send("{\"cmd\": \"commandInterval\", \"data\": {\"command\": \"" + command + "\", \"interval\": \"" + this.commandMap.get(command).getInterval() + "\"}}");
     }
 }

@@ -24,6 +24,7 @@
 package net.reallifegames.glm.sponge.server;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import net.reallifegames.glm.api.server.WsServerCommand;
 import net.reallifegames.glm.server.CommandRegistrar;
 import net.reallifegames.glm.sponge.GlMap;
 import org.java_websocket.WebSocket;
@@ -78,6 +79,6 @@ public class CommandRegistrarWk extends CommandRegistrar {
             // https://developer.mozilla.org/en-US/docs/Web/API/CloseEvent
             connection.close(1008, CommandRegistrarWk.KICK_MESSAGE);
         }
-        connection.send("{\"cmd\": \"commandInterval\", \"data\": {\"command\": \"" + command + "\"}}");
+        connection.send("{\"cmd\": \"commandInterval\", \"data\": {\"command\": \"" + command + "\", \"interval\": \"" + this.commandMap.get(command).getInterval() + "\"}}");
     }
 }

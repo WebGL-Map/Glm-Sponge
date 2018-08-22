@@ -101,7 +101,9 @@ public final class GetChunksForPositions extends GlmServerCommand {
                                 .getOrDefault(world.getUniqueId(), Optional.empty());
                         if (optionalWorldBorder.isPresent()) {
                             final WorldBorder border = optionalWorldBorder.get();
-                            if (!RequestQueue.containsPosition(chunkLocation, border.getCenter(), border.getDiameter() + 2.0d)) {
+                            final Vector3i chunkLocationWorldPos = new Vector3i(chunkLocation.getX() << 4,
+                                    chunkLocation.getY() << 4, chunkLocation.getZ() << 4);
+                            if (!RequestQueue.containsPosition(chunkLocationWorldPos, border.getCenter(), border.getDiameter() + 2.0d)) {
                                 continue;
                             }
                         }
@@ -221,7 +223,9 @@ public final class GetChunksForPositions extends GlmServerCommand {
                         jsonGenerator.writeEndObject();
                         // Flush data and send to client
                         jsonGenerator.flush();
-                        connection.send(stringWriter.toString());
+                        if (connection.isOpen()) {
+                            connection.send(stringWriter.toString());
+                        }
                     } catch (IOException e) {
                         e.printStackTrace();
                     }
@@ -318,7 +322,9 @@ public final class GetChunksForPositions extends GlmServerCommand {
                 jsonGenerator.writeEndObject();
                 // Flush data and send to client
                 jsonGenerator.flush();
-                connection.send(stringWriter.toString());
+                if (connection.isOpen()) {
+                    connection.send(stringWriter.toString());
+                }
             } catch (IOException e) {
                 e.printStackTrace();
             }
