@@ -69,7 +69,7 @@ import java.util.*;
  * @see <a href="https://docs.spongepowered.org/stable/en/plugin/injection.html#injection-examples">
  * Dependency Injection</a>
  */
-@Plugin (id = "glm", name = "GLM", version = "1.0.0", description = "Minecraft WebGL Map.")
+@Plugin (id = "glm", name = "GLM", version = "1.0.0", description = "Minecraft WebGL Map.", authors = {"agent6262"})
 public final class GlMap {
 
     /**
